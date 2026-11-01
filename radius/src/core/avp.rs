@@ -593,7 +593,7 @@ impl AVP {
         match int_bytes.try_into() {
             Ok(boxed_array) => {
                 let timestamp = u32::from_be_bytes(boxed_array);
-                Ok(Utc.timestamp(timestamp as i64, 0))
+                Ok(Utc.timestamp_opt(timestamp as i64, 0).unwrap())
             }
             Err(e) => Err(AVPError::DecodingError(e.to_string())),
         }
