@@ -198,6 +198,11 @@ impl<X, E: Debug, T: RequestHandler<X, E>, U: SecretProvider> Server<X, E, T, U>
             }
         };
 
+        if !skip_authenticity_validation && !packet.check_hmac(&secret) {
+            info!("Packet HMAC verification failed");
+            return;
+        }
+
         let key = RequestKey {
             ip: remote_addr.to_string(),
             identifier: packet.get_identifier(),

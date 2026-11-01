@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use hmac::{Hmac, KeyInit, Mac};
 use md5::{Digest, Md5};
 use rand::Rng;
 use thiserror::Error;
@@ -7,6 +8,9 @@ use thiserror::Error;
 use crate::core::attributes::Attributes;
 use crate::core::avp::{AVPType, AVP};
 use crate::core::code::Code;
+use crate::core::rfc2869::MESSAGE_AUTHENTICATOR_TYPE;
+
+type HmacMd5 = Hmac<Md5>;
 
 const MAX_PACKET_LENGTH: usize = 4096;
 const RADIUS_PACKET_HEADER_LENGTH: usize = 20; // i.e. minimum packet length
@@ -36,6 +40,10 @@ pub enum PacketError {
     /// An error that is raised when it received unknown packet type code of RADIUS.
     #[error("Unknown RADIUS packet type code: {0}")]
     UnknownCodeError(String),
+
+    /// An error that is raised when HMAC computation fails
+    #[error("Error while computing packet HMAC: {0}")]
+    HmacError(String),
 }
 
 /// This struct represents a packet of RADIUS for request and response.
@@ -262,6 +270,42 @@ impl Packet {
         )
         .to_vec()
         .eq(&response[4..RADIUS_PACKET_HEADER_LENGTH].to_vec())
+    }
+
+    fn compute_hmac(&self, secret: &[u8]) -> Result<HmacMd5, PacketError> {
+        let mut cl = self.clone();
+        let Some(mac_attr) = cl.attributes.lookup_mut(MESSAGE_AUTHENTICATOR_TYPE) else {
+            return Err(PacketError::HmacError(
+                "Missing Message-Authenticator attribute".to_owned(),
+            ));
+        };
+
+        for e in mac_attr.value.iter_mut() {
+            *e = 0;
+        }
+
+        let mut hmac = HmacMd5::new_from_slice(secret)
+            .map_err(|e| PacketError::HmacError(format!("Error constructing hmac: {}", e)))?;
+        hmac.update(
+            &cl.marshal_binary()
+                .map_err(|e| PacketError::EncodingError(e))?,
+        );
+
+        Ok(hmac)
+    }
+
+    pub fn check_hmac(&self, secret: &[u8]) -> bool {
+        let msg_mac = match self.lookup(MESSAGE_AUTHENTICATOR_TYPE) {
+            Some(mac_attr) => &mac_attr.value,
+            // no MAC in message, succeed check
+            None => return true,
+        };
+
+        let Ok(hmac) = self.compute_hmac(secret) else {
+            return false;
+        };
+
+        hmac.verify_slice(msg_mac).is_ok()
     }
 
     /// Returns whether the Packet is authentic request or not.
