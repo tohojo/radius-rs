@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use md5::{Digest, Md5};
 use rand::Rng;
 use thiserror::Error;
 
@@ -195,7 +196,7 @@ impl Packet {
                 }
                 buf.extend(bs[RADIUS_PACKET_HEADER_LENGTH..].to_vec());
                 buf.extend(&self.secret);
-                bs.splice(4..20, md5::compute(&buf).to_vec());
+                bs.splice(4..20, Md5::digest(&buf).to_vec());
 
                 Ok(bs)
             }
@@ -250,7 +251,7 @@ impl Packet {
             return false;
         }
 
-        md5::compute(
+        Md5::digest(
             [
                 &response[..4],
                 &request[4..RADIUS_PACKET_HEADER_LENGTH],
@@ -271,7 +272,7 @@ impl Packet {
 
         match Code::from(request[0]) {
             Code::AccessRequest | Code::StatusServer => true,
-            Code::AccountingRequest | Code::DisconnectRequest | Code::CoARequest => md5::compute(
+            Code::AccountingRequest | Code::DisconnectRequest | Code::CoARequest => Md5::digest(
                 [
                     &request[..4],
                     &[

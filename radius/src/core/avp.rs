@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use chrono::{DateTime, TimeZone, Utc};
+use md5::{Digest, Md5};
 use thiserror::Error;
 
 use crate::core::tag::{Tag, UNUSED_TAG_VALUE};
@@ -234,7 +235,7 @@ impl AVP {
         let mut buff = request_authenticator.to_vec();
 
         if plain_text.is_empty() {
-            let enc = md5::compute([secret, &buff[..]].concat()).to_vec();
+            let enc = Md5::digest([secret, &buff[..]].concat()).to_vec();
             return Ok(AVP {
                 typ,
                 value: enc.iter().zip(vec![0; 16]).map(|(d, p)| d ^ p).collect(),
@@ -249,7 +250,7 @@ impl AVP {
                 chunk_vec.extend(vec![0; 16 - l]); // zero padding
             }
 
-            let enc_block = md5::compute([secret, &buff[..]].concat()).to_vec();
+            let enc_block = Md5::digest([secret, &buff[..]].concat()).to_vec();
             buff = enc_block
                 .iter()
                 .zip(chunk_vec)
@@ -332,7 +333,7 @@ impl AVP {
                 typ,
                 value: [
                     enc,
-                    md5::compute([secret, &buff[..]].concat())
+                    Md5::digest([secret, &buff[..]].concat())
                         .iter()
                         .zip(vec![0; 16])
                         .map(|(d, p)| d ^ p)
@@ -349,7 +350,7 @@ impl AVP {
                 chunk_vec.extend(vec![0; 16 - l]); // zero padding
             }
 
-            let enc_block = md5::compute([secret, &buff[..]].concat()).to_vec();
+            let enc_block = Md5::digest([secret, &buff[..]].concat()).to_vec();
             buff = enc_block
                 .iter()
                 .zip(chunk_vec)
@@ -560,7 +561,7 @@ impl AVP {
         // And this must be aligned by each 16 bytes length.
         for chunk in self.value.chunks(16) {
             let chunk_vec = chunk.to_vec();
-            let dec_block = md5::compute([secret, &buff[..]].concat()).to_vec();
+            let dec_block = Md5::digest([secret, &buff[..]].concat()).to_vec();
             dec.extend(
                 dec_block
                     .iter()
@@ -633,7 +634,7 @@ impl AVP {
 
         for chunk in self.value[3..].chunks(16) {
             let chunk_vec = chunk.to_vec();
-            let dec_block = md5::compute([secret, &buff[..]].concat()).to_vec();
+            let dec_block = Md5::digest([secret, &buff[..]].concat()).to_vec();
             dec.extend(
                 dec_block
                     .iter()

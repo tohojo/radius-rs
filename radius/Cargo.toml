@@ -13,7 +13,7 @@ categories =  ["network-programming"]
 keywords = ["radius", "async"]
 
 [dependencies]
-md5 = "0.7.0"
+md-5 = "0.11.0"
 chrono = "0.4"
 rand = "0.8.3"
 num_enum = "0.5.1"
