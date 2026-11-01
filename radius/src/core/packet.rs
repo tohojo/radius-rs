@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use hmac::{Hmac, KeyInit, Mac};
-use md5::{Digest, Md5};
+use md5::{digest::OutputSizeUser, Digest, Md5};
 use rand::Rng;
 use thiserror::Error;
 
@@ -306,6 +306,26 @@ impl Packet {
         };
 
         hmac.verify_slice(msg_mac).is_ok()
+    }
+
+    /// Add a new Meassage-Authenticator attribute to the packet with its
+    /// content computed from the current state of the packet. This must be
+    /// called as the last thing before encoding the packet, as any other
+    /// modifications invalidates the HMAC.
+    pub fn add_hmac(&mut self, secret: &[u8]) -> Result<(), PacketError> {
+        self.delete(MESSAGE_AUTHENTICATOR_TYPE);
+        self.add(AVP::from_bytes(
+            MESSAGE_AUTHENTICATOR_TYPE,
+            &vec![0; HmacMd5::output_size()],
+        ));
+
+        let hmac = self.compute_hmac(secret)?.finalize().into_bytes();
+        let msg_mac = self
+            .attributes
+            .lookup_mut(MESSAGE_AUTHENTICATOR_TYPE)
+            .unwrap();
+        msg_mac.value[..].copy_from_slice(hmac.as_slice());
+        Ok(())
     }
 
     /// Returns whether the Packet is authentic request or not.
