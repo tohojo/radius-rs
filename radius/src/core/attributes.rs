@@ -1,4 +1,4 @@
-use crate::core::avp::{AVP, AVPType};
+use crate::core::avp::{AVPType, AVP};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Attributes(pub(crate) Vec<AVP>);
@@ -52,6 +52,15 @@ impl Attributes {
 
     pub(crate) fn lookup(&self, typ: AVPType) -> Option<&AVP> {
         self.0.iter().find_map(|avp| {
+            if avp.typ == typ {
+                return Some(avp);
+            }
+            None
+        })
+    }
+
+    pub(crate) fn lookup_mut(&mut self, typ: AVPType) -> Option<&mut AVP> {
+        self.0.iter_mut().find_map(|avp| {
             if avp.typ == typ {
                 return Some(avp);
             }
