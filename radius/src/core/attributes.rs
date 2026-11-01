@@ -1,4 +1,4 @@
-use crate::core::avp::{AVPType, AVP};
+use crate::core::avp::{AVP, AVPType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Attributes(pub(crate) Vec<AVP>);

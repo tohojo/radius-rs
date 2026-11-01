@@ -74,7 +74,7 @@ macro_rules! avp_from_integral {
             let bytes = &value.to_be_bytes();
             // "Integral byte size is less than requested length"
             sa::const_assert!(size_of::<$integral>() >= $len);
-            let (discard, keep) = bytes.split_at(bytes.len()-$len);
+            let (discard, keep) = bytes.split_at(bytes.len() - $len);
             assert!(
                 discard.iter().all(|&el| el == 0),
                 "Overflow, expected trimmed bytes to be all zero"
@@ -87,7 +87,9 @@ macro_rules! avp_from_integral {
 pub(crate) use avp_from_integral;
 
 pub fn to_unused_tag(tag: Option<&Tag>) -> &Tag {
-    tag.unwrap_or(&Tag {value: UNUSED_TAG_VALUE})
+    tag.unwrap_or(&Tag {
+        value: UNUSED_TAG_VALUE,
+    })
 }
 
 impl AVP {
@@ -97,8 +99,8 @@ impl AVP {
             typ,
             value: match tag {
                 None => value.to_vec(),
-                Some(tag) => [vec![tag.value], value.to_vec()].concat()
-            }
+                Some(tag) => [vec![tag.value], value.to_vec()].concat(),
+            },
         }
     }
 
